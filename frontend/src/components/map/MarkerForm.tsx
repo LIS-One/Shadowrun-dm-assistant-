@@ -49,17 +49,17 @@ export function MarkerForm({
             value={filter}
             onChange={(e) => setFilter(e.target.value)}
             placeholder="Фильтр…"
-            className="w-28 rounded border border-line bg-bg/60 px-2 py-0.5 text-xs outline-none focus:border-accent"
+            className="w-32 border border-line bg-bg/60 px-2 py-1 text-base outline-none focus:border-accent sm:text-xs"
           />
         </div>
-        <div className="scrollbar-thin grid max-h-48 grid-cols-2 gap-1.5 overflow-y-auto pr-1">
+        <div className="scrollbar-thin grid max-h-56 grid-cols-2 gap-1.5 overflow-y-auto pr-1">
           {shownTypes.map((t) => (
             <button
               type="button"
               key={t.id}
               onClick={() => setTypeId(t.id)}
-              className={`flex items-center gap-2 rounded-lg border px-2 py-1.5 text-left text-xs transition ${
-                t.id === typeId ? "border-accent bg-accent/10 text-white" : "border-line text-slate-300 hover:border-slate-500"
+              className={`flex min-h-11 items-center gap-2 border px-2 py-1.5 text-left text-xs transition ${
+                t.id === typeId ? "border-accent bg-accent/10 text-white" : "border-line text-slate-300 hover:border-line-hi"
               }`}
             >
               <MarkerGlyph shape={t.shape} color={t.color} icon={t.icon} size={22} />
@@ -80,18 +80,18 @@ export function MarkerForm({
       </label>
 
       <label className="block">
-        <span className="label text-amber-300/90">🔒 Заметки мастера (никогда не видны игрокам)</span>
+        <span className="label text-warn">Заметки мастера — никогда не видны игрокам</span>
         <textarea
           value={gmNotes}
           onChange={(e) => setGmNotes(e.target.value)}
           rows={3}
           maxLength={10000}
-          className="input border-amber-500/30 bg-amber-500/5"
+          className="input border-warn/40 bg-warn/5"
           placeholder="Ловушки, NPC, тайные мотивы…"
         />
       </label>
 
-      <label className="flex cursor-pointer items-center justify-between gap-3 rounded-lg border border-line bg-bg/50 px-3 py-2.5">
+      <label className="cut-corners-sm flex min-h-14 cursor-pointer items-center justify-between gap-3 border border-line bg-bg/50 px-3 py-2.5">
         <span>
           <span className="block text-sm font-medium">Скрыть от игроков</span>
           <span className="block text-xs text-slate-400">Метку видят только мастера, пока вы её не откроете</span>
@@ -102,14 +102,14 @@ export function MarkerForm({
           checked={visibility === "HIDDEN"}
           onChange={(e) => setVisibility(e.target.checked ? "HIDDEN" : "VISIBLE")}
         />
-        <span className="relative h-6 w-11 shrink-0 rounded-full bg-slate-700 transition after:absolute after:left-0.5 after:top-0.5 after:h-5 after:w-5 after:rounded-full after:bg-white after:transition peer-checked:bg-amber-500 peer-checked:after:translate-x-5" />
+        <span className="relative h-7 w-12 shrink-0 border border-line-hi bg-bg transition after:absolute after:left-1 after:top-1 after:h-4.5 after:w-4.5 after:bg-muted after:transition peer-checked:border-warn peer-checked:after:translate-x-5 peer-checked:after:bg-warn" />
       </label>
 
-      <p className="font-mono text-xs text-slate-500">
+      <p className="font-mono text-xs text-muted">
         x {Math.round(position.x)} · y {Math.round(position.y)}
       </p>
 
-      <div className="flex gap-2">
+      <div className="sticky bottom-0 -mx-1 flex gap-2 bg-panel/95 px-1 py-2">
         <button className="btn-primary flex-1" disabled={busy || !title.trim()}>
           {initial ? "Сохранить" : "Создать метку"}
         </button>

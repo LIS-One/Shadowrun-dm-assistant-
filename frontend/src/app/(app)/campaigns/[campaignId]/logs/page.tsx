@@ -25,28 +25,28 @@ export default function LogsPage() {
     <>
       <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h2 className="text-xl font-semibold">Логи игр</h2>
-          <p className="text-sm text-slate-400">
+          <h2 className="text-xl">Хроника забегов</h2>
+          <p className="text-sm text-muted">
             {isMaster ? "Записывайте, что произошло на сессии. Черновики видят только мастера." : "Хроника прошедших забегов."}
           </p>
         </div>
-        {isMaster && <button className="btn-primary" onClick={() => setEditing("new")}>+ Новый лог</button>}
+        {isMaster && <button className="btn-primary w-full sm:w-auto" onClick={() => setEditing("new")}>+ Новый лог</button>}
       </div>
 
       {error && <p className="text-red-400">{errorMessage(error)}</p>}
-      {logs?.length === 0 && <div className="panel p-10 text-center text-slate-400">Логов пока нет.</div>}
+      {logs?.length === 0 && <div className="panel cut-corners hud-brackets p-10 text-center text-slate-400">Логов пока нет.</div>}
 
-      <ol className="relative space-y-4 border-l border-line pl-6">
+      <ol className="relative space-y-4 border-l border-line pl-5 sm:pl-6">
         {logs?.map((l) => (
           <li key={l.id} className="relative">
-            <span className={`absolute -left-[31px] top-5 h-3 w-3 rounded-full border-2 border-bg ${l.published ? "bg-accent" : "bg-slate-600"}`} />
+            <span className={`absolute -left-[26px] top-6 h-3 w-3 rotate-45 border-2 border-bg sm:-left-[30px] ${l.published ? "bg-accent shadow-[0_0_8px_#3dff9e]" : "bg-slate-600"}`} />
             <button onClick={() => setOpen(l.id)} className="card-link w-full text-left">
-              <div className="flex flex-wrap items-center gap-2 text-xs text-slate-500">
+              <div className="flex flex-wrap items-center gap-2 font-mono text-[11px] text-muted">
                 {l.sessionNumber != null && <span className="font-mono text-accent">#{l.sessionNumber}</span>}
                 {l.playedOn && <span>{new Date(l.playedOn).toLocaleDateString("ru-RU", { dateStyle: "long" })}</span>}
                 {!l.published && <span className="chip border-slate-500 text-slate-300">Черновик</span>}
               </div>
-              <h3 className="mt-1 text-lg font-semibold">{l.title}</h3>
+              <h3 className="mt-1 text-lg">{l.title}</h3>
               {l.summary && <p className="mt-1 text-sm text-slate-400">{l.summary}</p>}
             </button>
           </li>
@@ -55,12 +55,12 @@ export default function LogsPage() {
 
       {open && (
         <Modal title={open.title} onClose={() => setOpen(null)} wide>
-          <p className="mb-4 text-xs text-slate-500">
+          <p className="mb-4 font-mono text-[11px] text-muted">
             {open.sessionNumber != null && `Сессия #${open.sessionNumber} · `}
             {open.playedOn && `${new Date(open.playedOn).toLocaleDateString("ru-RU", { dateStyle: "long" })} · `}
             {open.authorName && `автор: ${open.authorName}`}
           </p>
-          {open.summary && <p className="mb-4 rounded-lg border border-line bg-bg/50 p-3 text-sm italic text-slate-300">{open.summary}</p>}
+          {open.summary && <p className="mb-4 border-l-2 border-accent bg-bg/50 p-3 text-sm italic text-slate-300">{open.summary}</p>}
           {open.content ? (
             <div className="whitespace-pre-wrap text-sm leading-relaxed text-slate-200">{open.content}</div>
           ) : (
@@ -149,12 +149,12 @@ function LogEditor({
   return (
     <Modal title={log ? "Редактировать лог" : "Новый лог сессии"} onClose={onClose} wide>
       <form onSubmit={submit} className="space-y-4">
-        <div className="grid grid-cols-[100px_1fr_170px] gap-3">
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-[90px_1fr_170px]">
           <label className="block">
             <span className="label">№</span>
             <input name="sessionNumber" type="number" min={0} defaultValue={log?.sessionNumber ?? nextNumber} className="input" />
           </label>
-          <label className="block">
+          <label className="col-span-2 block sm:order-none sm:col-span-1">
             <span className="label">Название</span>
             <input name="title" required maxLength={200} defaultValue={log?.title ?? ""} className="input" placeholder="Налёт на склад Aztechnology" />
           </label>

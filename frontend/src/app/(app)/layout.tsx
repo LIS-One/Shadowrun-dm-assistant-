@@ -1,5 +1,6 @@
-import Link from "next/link";
 import { redirect } from "next/navigation";
+import { IconLogout } from "@/components/icons";
+import { Logo } from "@/components/Logo";
 import { ProfileSync } from "@/components/ProfileSync";
 import { Toaster } from "@/components/Toaster";
 import { getCurrentUser, loginUrl, logoutUrl } from "@/lib/session";
@@ -11,23 +12,22 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   return (
     <Toaster>
       <ProfileSync name={user.name} email={user.email} picture={user.picture} />
-      <header className="sticky top-0 z-40 border-b border-line bg-bg/80 backdrop-blur">
+      <header className="sticky top-0 z-40 border-b border-line bg-bg/85 pt-[var(--safe-top)] backdrop-blur-md">
         <div className="mx-auto flex h-14 max-w-6xl items-center justify-between px-4">
-          <Link href="/campaigns" className="flex items-center gap-2 font-semibold">
-            <span className="grid h-7 w-7 place-items-center rounded-md bg-gradient-to-br from-accent to-accent-2 text-xs font-black text-slate-950">
-              SR
-            </span>
-            <span className="hidden sm:inline">DM Assistant</span>
-          </Link>
-          <div className="flex items-center gap-3 text-sm">
+          <Logo />
+          <div className="flex items-center gap-2 text-sm sm:gap-3">
             {user.picture ? (
               // eslint-disable-next-line @next/next/no-img-element
-              <img src={user.picture} alt="" className="h-7 w-7 rounded-full" />
+              <img src={user.picture} alt="" className="h-8 w-8 border border-line-hi" />
             ) : (
-              <span className="grid h-7 w-7 place-items-center rounded-full bg-panel-2 text-xs">{user.name.slice(0, 1)}</span>
+              <span className="grid h-8 w-8 place-items-center border border-line-hi bg-panel-2 font-display text-xs text-accent">
+                {user.name.slice(0, 1).toUpperCase()}
+              </span>
             )}
-            <span className="hidden text-slate-300 sm:inline">{user.name}</span>
-            <a href={logoutUrl()} className="btn-ghost px-3 py-1.5 text-xs">Выйти</a>
+            <span className="hidden max-w-40 truncate font-mono text-xs uppercase tracking-wider text-slate-300 sm:inline">{user.name}</span>
+            <a href={logoutUrl()} className="grid h-11 w-11 place-items-center text-muted hover:text-accent" title="Выйти" aria-label="Выйти">
+              <IconLogout />
+            </a>
           </div>
         </div>
       </header>

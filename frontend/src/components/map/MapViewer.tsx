@@ -8,6 +8,17 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { ImageOverlay, MapContainer, Marker as LeafletMarker, Tooltip, useMap, useMapEvents } from "react-leaflet";
 import useSWR from "swr";
 import { useCampaign } from "@/components/campaign/CampaignContext";
+import {
+  IconBack,
+  IconClose,
+  IconExpand,
+  IconEyeOff,
+  IconLayers,
+  IconMinus,
+  IconPin,
+  IconPlus,
+  IconSearch,
+} from "@/components/icons";
 import { useToast } from "@/components/Toaster";
 import { api, backendUrl, errorMessage, fetcher } from "@/lib/api";
 import type { GameMap, Marker, MarkerInput, MarkerNote, MarkerType } from "@/lib/types";
@@ -63,6 +74,10 @@ export default function MapViewer({ campaignId, mapId }: { campaignId: number; m
   const hiddenOnly = hiddenOnlyState && masterMode;
   const [legendOpen, setLegendOpen] = useState(false);
   const searchRef = useRef<HTMLInputElement>(null);
+  // Phone bottom sheet: which panel is expanded to full height, and the live drag offset.
+  const [sheetFullFor, setSheetFullFor] = useState<string | null>(null);
+  const [sheetDrag, setSheetDrag] = useState<number | null>(null);
+  const dragStartY = useRef<number | null>(null);
 
   const typeById = useMemo(() => new Map(types.map((t) => [t.id, t])), [types]);
 
@@ -115,7 +130,11 @@ export default function MapViewer({ campaignId, mapId }: { campaignId: number; m
     searchRef.current?.blur();
     if (leafletMap) {
       const zoom = Math.max(leafletMap.getZoom(), leafletMap.getMinZoom() + 2);
-      leafletMap.flyTo(toLatLng(m.x, m.y), zoom, { duration: 0.6 });
+      // Shift the view so the marker isn't covered by the side panel (desktop) or bottom sheet (phone).
+      const size = leafletMap.getSize();
+      const offset = size.x < 640 ? L.point(0, size.y * 0.24) : L.point(-205, 0);
+      const center = leafletMap.unproject(leafletMap.project(toLatLng(m.x, m.y), zoom).add(offset), zoom);
+      leafletMap.flyTo(center, zoom, { duration: 0.6 });
     }
   }
 
@@ -143,7 +162,7 @@ export default function MapViewer({ campaignId, mapId }: { campaignId: number; m
     try {
       const created = await api<Marker>(markersUrl, { method: "POST", json: input });
       await mutateMarkers((list = []) => [...list, created], { revalidate: false });
-      setPanel({ kind: "view", id: created.id });
+      focusMarker(created);
       toast(created.visibility === "HIDDEN" ? "Скрытая метка создана" : "Метка создана", "success");
     } catch (err) {
       toast(errorMessage(err), "error");
@@ -234,7 +253,7 @@ export default function MapViewer({ campaignId, mapId }: { campaignId: number; m
 
   if (mapError) {
     return (
-      <div className="fixed inset-0 z-50 grid place-items-center bg-bg">
+      <div className="fixed inset-0 z-50 grid place-items-center bg-bg p-6">
         <div className="text-center">
           <p className="text-red-400">{errorMessage(mapError)}</p>
           <Link href={base} className="btn-ghost mt-4">← К картам</Link>
@@ -244,10 +263,31 @@ export default function MapViewer({ campaignId, mapId }: { campaignId: number; m
   }
 
   const panelOpen = panel !== null;
+  const panelKey = panel ? (panel.kind === "create" ? `create:${panel.x}:${panel.y}` : `${panel.kind}:${panel.id}`) : null;
+  // Forms need room, so editing always opens the phone sheet fully.
+  const sheetExpanded = panel !== null && (panel.kind !== "view" || sheetFullFor === panelKey);
+  const sheetHeight = `calc(${sheetExpanded ? "100dvh - var(--safe-top) - 12px" : "48dvh"} - ${sheetDrag ?? 0}px)`;
   const noteCountByMarker = notes.reduce<Record<number, number>>((acc, n) => ({ ...acc, [n.markerId]: (acc[n.markerId] ?? 0) + 1 }), {});
+  const showChips = typesOnMap.length > 0 || (masterMode && hiddenCount > 0);
+
+  const chips = (
+    <>
+      {masterMode && hiddenCount > 0 && (
+        <button
+          onClick={() => setHiddenOnly((v) => !v)}
+          className={`chip min-h-9 shrink-0 whitespace-nowrap px-3 shadow-lg ${hiddenOnly ? "border-warn bg-warn/20 text-warn" : "bg-panel/95"}`}
+        >
+          <IconEyeOff className="h-3.5 w-3.5" /> Скрытые · {hiddenCount}
+        </button>
+      )}
+      {typesOnMap.map(({ type, count }) => (
+        <TypeChip key={type.id} type={type} count={count} active={activeTypes.has(type.id)} onToggle={() => toggleType(type.id)} />
+      ))}
+    </>
+  );
 
   return (
-    <div className="fixed inset-0 z-50 bg-bg">
+    <div className="fixed inset-0 z-50 overflow-hidden bg-bg">
       {map ? (
         <MapContainer
           ref={setLeafletMap}
@@ -280,7 +320,10 @@ export default function MapViewer({ campaignId, mapId }: { campaignId: number; m
             onContextMenu={(latLng, point) => {
               const { x, y } = fromLatLng(latLng);
               if (x < 0 || y < 0 || x > map.width || y > map.height) return;
-              setContextMenu({ x, y, left: point.x, top: point.y });
+              // Keep the menu on screen on small displays.
+              const left = Math.min(point.x, window.innerWidth - 240);
+              const top = Math.min(point.y, window.innerHeight - 130);
+              setContextMenu({ x, y, left: Math.max(8, left), top: Math.max(8, top) });
             }}
             onMoveStart={() => setContextMenu(null)}
           />
@@ -311,15 +354,16 @@ export default function MapViewer({ campaignId, mapId }: { campaignId: number; m
           <CursorReadout />
         </MapContainer>
       ) : (
-        <div className="grid h-full place-items-center text-slate-400">Загрузка карты…</div>
+        <div className="grid h-full place-items-center font-mono text-sm uppercase tracking-widest text-muted">Загрузка карты…</div>
       )}
 
-      {/* ---- search box (top-left) ---- */}
-      <div className="absolute left-3 top-3 z-[1100] w-[min(400px,calc(100vw-24px))]">
-        <div className="panel flex items-center gap-1 rounded-full px-2 py-1.5 shadow-2xl">
-          <Link href={base} className="grid h-9 w-9 shrink-0 place-items-center rounded-full text-slate-300 hover:bg-panel-2" title="К картам кампании">
-            ←
+      {/* ---- top bar: search + chips (phones: full width, desktop: top-left) ---- */}
+      <div className={`absolute inset-x-3 top-[calc(0.75rem+var(--safe-top))] z-[1100] sm:right-auto sm:block sm:w-[400px] ${sheetExpanded ? "hidden" : ""}`}>
+        <div className="panel cut-corners-sm flex h-12 items-center gap-1 px-1 shadow-2xl">
+          <Link href={base} className="grid h-11 w-11 shrink-0 place-items-center text-slate-300 hover:text-accent" title="К картам кампании" aria-label="Назад">
+            <IconBack />
           </Link>
+          <IconSearch className="h-4 w-4 shrink-0 text-muted" />
           <input
             ref={searchRef}
             value={query}
@@ -329,21 +373,22 @@ export default function MapViewer({ campaignId, mapId }: { campaignId: number; m
             onKeyDown={(e) => {
               if (e.key === "Enter" && searchResults[0]) focusMarker(searchResults[0]);
             }}
-            placeholder={map ? `Поиск по карте «${map.name}»` : "Поиск…"}
-            className="min-w-0 flex-1 bg-transparent px-1 text-sm outline-none placeholder:text-slate-500"
+            placeholder={map ? map.name : "Поиск…"}
+            className="min-w-0 flex-1 bg-transparent px-2 text-base outline-none placeholder:text-slate-500 sm:text-sm"
             aria-label="Поиск меток"
+            enterKeyHint="search"
           />
           {query ? (
-            <button onClick={() => setQuery("")} className="grid h-9 w-9 place-items-center rounded-full text-slate-400 hover:bg-panel-2" aria-label="Очистить">
-              ✕
+            <button onClick={() => setQuery("")} className="grid h-11 w-11 place-items-center text-muted hover:text-white" aria-label="Очистить">
+              <IconClose className="h-4 w-4" />
             </button>
           ) : (
             <span className="hidden pr-3 font-mono text-xs text-slate-600 sm:inline">/</span>
           )}
         </div>
         {searchFocused && query.trim() && (
-          <div className="panel mt-2 overflow-hidden p-1">
-            {searchResults.length === 0 && <p className="px-3 py-2 text-sm text-slate-500">Ничего не найдено</p>}
+          <div className="panel cut-corners-sm mt-2 max-h-[50dvh] overflow-y-auto p-1">
+            {searchResults.length === 0 && <p className="px-3 py-3 text-sm text-muted">Ничего не найдено</p>}
             {searchResults.map((m) => {
               const t = typeById.get(m.typeId);
               return (
@@ -351,49 +396,43 @@ export default function MapViewer({ campaignId, mapId }: { campaignId: number; m
                   key={m.id}
                   onMouseDown={(e) => e.preventDefault()}
                   onClick={() => focusMarker(m)}
-                  className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-left hover:bg-panel-2"
+                  className="flex min-h-12 w-full items-center gap-3 px-3 py-2 text-left hover:bg-panel-2"
                 >
                   {t && <MarkerGlyph shape={t.shape} color={t.color} icon={t.icon} hidden={m.visibility === "HIDDEN"} size={24} />}
                   <span className="min-w-0">
                     <span className="block truncate text-sm">{m.title}</span>
-                    <span className="block truncate text-xs text-slate-500">{t?.name}</span>
+                    <span className="block truncate font-mono text-[11px] text-muted">{t?.name}</span>
                   </span>
                 </button>
               );
             })}
           </div>
         )}
+        {/* phones and tablets: chips under the search bar */}
+        {showChips && !(searchFocused && query.trim()) && (
+          <div className="scrollbar-thin -mx-3 mt-2 flex gap-2 overflow-x-auto px-3 pb-1 xl:hidden">{chips}</div>
+        )}
       </div>
 
-      {/* ---- type filter chips (top, next to the search box) ---- */}
-      {(typesOnMap.length > 0 || (masterMode && hiddenCount > 0)) && (
-        <div
-          className="scrollbar-thin absolute left-[424px] top-3.5 z-[1050] hidden max-w-[calc(100vw-920px)] gap-2 overflow-x-auto pb-1 xl:flex"
-        >
-          {masterMode && hiddenCount > 0 && (
-            <button
-              onClick={() => setHiddenOnly((v) => !v)}
-              className={`chip shrink-0 whitespace-nowrap px-3 py-1.5 text-sm shadow-lg ${
-                hiddenOnly ? "border-amber-400 bg-amber-500/20 text-amber-200" : "bg-panel/95"
-              }`}
-            >
-              ◌ Скрытые · {hiddenCount}
-            </button>
-          )}
-          {typesOnMap.map(({ type, count }) => (
-            <TypeChip key={type.id} type={type} count={count} active={activeTypes.has(type.id)} onToggle={() => toggleType(type.id)} />
-          ))}
+      {/* desktop: chips next to the search bar */}
+      {showChips && (
+        <div className="scrollbar-thin absolute left-[424px] top-[calc(1rem+var(--safe-top))] z-[1050] hidden max-w-[calc(100vw-940px)] gap-2 overflow-x-auto pb-1 xl:flex">
+          {chips}
         </div>
       )}
 
-      {/* ---- top-right controls ---- */}
-      <div className="absolute right-3 top-[68px] z-[1100] flex flex-col items-end gap-2 sm:top-3">
-        <div className="flex items-center gap-2">
+      {/* ---- right column: mode, map switcher, legend ---- */}
+      <div
+        className={`absolute right-3 top-[calc(7.5rem+var(--safe-top))] z-[1100] flex-col items-end gap-2 sm:top-[calc(0.75rem+var(--safe-top))] sm:flex ${
+          sheetExpanded ? "hidden" : "flex"
+        }`}
+      >
+        <div className="flex flex-col items-end gap-2 sm:flex-row sm:items-center">
           {allMaps && allMaps.length > 1 && (
             <select
               value={mapId}
               onChange={(e) => router.push(`${base}/maps/${e.target.value}`)}
-              className="panel h-10 max-w-[180px] rounded-full px-3 text-sm outline-none"
+              className="panel cut-corners-sm hidden h-11 max-w-[200px] px-3 font-mono text-xs uppercase outline-none sm:block"
               aria-label="Другая карта"
             >
               {allMaps.map((m) => (
@@ -402,18 +441,19 @@ export default function MapViewer({ campaignId, mapId }: { campaignId: number; m
             </select>
           )}
           {isMaster && (
-            <div className="panel flex h-10 items-center rounded-full p-1 text-xs" role="group" aria-label="Режим">
+            <div className="panel cut-corners-sm flex h-11 items-center p-1 font-mono text-[11px] uppercase tracking-wider" role="group" aria-label="Режим">
               <button
                 onClick={() => setViewAsPlayer(false)}
-                className={`rounded-full px-3 py-1.5 transition ${!viewAsPlayer ? "bg-accent-2 font-semibold text-slate-950" : "text-slate-300"}`}
+                className={`h-9 px-3 transition ${!viewAsPlayer ? "bg-accent-2 font-bold text-black" : "text-slate-300"}`}
               >
                 Мастер
               </button>
               <button
                 onClick={() => setViewAsPlayer(true)}
-                className={`rounded-full px-3 py-1.5 transition ${viewAsPlayer ? "bg-accent font-semibold text-slate-950" : "text-slate-300"}`}
+                className={`h-9 px-3 transition ${viewAsPlayer ? "bg-accent font-bold text-black" : "text-slate-300"}`}
               >
-                Вид игрока
+                <span className="sm:hidden">Игрок</span>
+                <span className="hidden sm:inline">Вид игрока</span>
               </button>
             </div>
           )}
@@ -424,33 +464,37 @@ export default function MapViewer({ campaignId, mapId }: { campaignId: number; m
               setPlacing((v) => !v);
               setContextMenu(null);
             }}
-            className={`btn h-10 rounded-full px-4 shadow-xl ${placing ? "bg-amber-400 text-slate-950" : "bg-accent-2 text-slate-950 hover:bg-fuchsia-300"}`}
+            className={`hidden h-11 shadow-xl sm:inline-flex ${placing ? "btn bg-warn text-black" : "btn-magenta"}`}
           >
-            {placing ? "✕ Отменить" : "📍 Добавить метку"}
+            {placing ? (<><IconClose className="h-4 w-4" /> Отменить</>) : (<><IconPin className="h-4 w-4" /> Добавить метку</>)}
           </button>
         )}
-        <button onClick={() => setLegendOpen((v) => !v)} className="panel h-10 rounded-full px-4 text-sm hover:border-slate-500">
-          ☰ Легенда
+        <button
+          onClick={() => setLegendOpen((v) => !v)}
+          className={`panel cut-corners-sm grid h-11 w-11 place-items-center sm:flex sm:w-auto sm:gap-2 sm:px-4 sm:font-mono sm:text-xs sm:uppercase ${legendOpen ? "border-accent text-accent" : "text-slate-200"}`}
+          aria-label="Легенда"
+        >
+          <IconLayers className="h-5 w-5 sm:h-4 sm:w-4" /> <span className="hidden sm:inline">Легенда</span>
         </button>
         {legendOpen && (
-          <div className="panel scrollbar-thin max-h-[50vh] w-64 overflow-y-auto p-3">
+          <div className="panel cut-corners scrollbar-thin max-h-[50dvh] w-[min(280px,calc(100vw-24px))] overflow-y-auto p-3">
             <p className="label">Типы меток на карте</p>
-            {typesOnMap.length === 0 && <p className="text-sm text-slate-500">Меток пока нет</p>}
+            {typesOnMap.length === 0 && <p className="text-sm text-muted">Меток пока нет</p>}
             {typesOnMap.map(({ type, count }) => (
               <button
                 key={type.id}
                 onClick={() => toggleType(type.id)}
-                className={`flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left text-sm hover:bg-panel-2 ${
+                className={`flex min-h-11 w-full items-center gap-2 px-2 text-left text-sm hover:bg-panel-2 ${
                   activeTypes.size > 0 && !activeTypes.has(type.id) ? "opacity-40" : ""
                 }`}
               >
                 <MarkerGlyph shape={type.shape} color={type.color} icon={type.icon} size={22} />
                 <span className="flex-1 truncate">{type.name}</span>
-                <span className="text-xs text-slate-500">{count}</span>
+                <span className="font-mono text-xs text-muted">{count}</span>
               </button>
             ))}
             {activeTypes.size > 0 && (
-              <button onClick={() => setActiveTypes(new Set())} className="mt-2 w-full text-xs text-accent hover:underline">
+              <button onClick={() => setActiveTypes(new Set())} className="mt-2 min-h-11 w-full font-mono text-xs uppercase text-accent hover:underline">
                 Показать все
               </button>
             )}
@@ -458,56 +502,82 @@ export default function MapViewer({ campaignId, mapId }: { campaignId: number; m
         )}
       </div>
 
-      {/* ---- zoom controls (bottom-right) ---- */}
-      <div
-        className={`absolute bottom-6 right-3 z-[1100] flex-col overflow-hidden rounded-xl border border-line bg-panel/95 shadow-xl ${
-          panelOpen ? "hidden sm:flex" : "flex"
-        }`}
-      >
-        <button onClick={() => leafletMap?.zoomIn()} className="h-10 w-10 text-lg hover:bg-panel-2" aria-label="Приблизить">+</button>
-        <button onClick={() => leafletMap?.zoomOut()} className="h-10 w-10 border-t border-line text-lg hover:bg-panel-2" aria-label="Отдалить">−</button>
+      {/* ---- zoom controls (desktop; phones pinch) ---- */}
+      <div className="panel absolute bottom-6 right-3 z-[1100] hidden flex-col sm:flex">
+        <button onClick={() => leafletMap?.zoomIn()} className="grid h-11 w-11 place-items-center hover:text-accent" aria-label="Приблизить"><IconPlus /></button>
+        <button onClick={() => leafletMap?.zoomOut()} className="grid h-11 w-11 place-items-center border-t border-line hover:text-accent" aria-label="Отдалить"><IconMinus /></button>
         <button
           onClick={() => map && leafletMap?.flyToBounds(L.latLngBounds([-map.height, 0], [0, map.width]), { duration: 0.5 })}
-          className="h-10 w-10 border-t border-line text-sm hover:bg-panel-2"
+          className="grid h-11 w-11 place-items-center border-t border-line hover:text-accent"
           aria-label="Показать всю карту"
           title="Вся карта"
         >
-          ⤢
+          <IconExpand className="h-4 w-4" />
         </button>
       </div>
 
-      {/* ---- status bar (bottom-left) ---- */}
-      <div className={`absolute bottom-6 z-[1050] flex items-center gap-2 transition-all ${panelOpen ? "left-3 sm:left-[424px]" : "left-3"}`}>
-        <span className="chip bg-panel/95 px-3 py-1 shadow-lg">
-          📍 {visibleMarkers.length}
-          {masterMode && hiddenCount > 0 && <span className="text-amber-300"> · ◌ {hiddenCount} скрыто</span>}
-        </span>
-        {!isMaster && <span className="chip bg-panel/95 px-3 py-1 shadow-lg">Режим игрока</span>}
-        {viewAsPlayer && <span className="rounded-full border border-cyan-400/50 bg-cyan-950/90 px-3 py-1 text-xs text-cyan-100 shadow-lg">Так карту видят игроки</span>}
-      </div>
-
-      {placing && (
-        <div className="absolute left-1/2 top-20 z-[1100] -translate-x-1/2 rounded-full border border-amber-400/50 bg-amber-950/90 px-4 py-2 text-sm text-amber-100 shadow-xl">
-          Кликните на карту, чтобы поставить метку · Esc — отмена
+      {/* ---- phone floating buttons ---- */}
+      {!panelOpen && (
+        <div className="absolute right-4 bottom-[calc(1rem+var(--safe-bottom))] z-[1100] flex flex-col items-end gap-3 sm:hidden">
+          <button
+            onClick={() => map && leafletMap?.flyToBounds(L.latLngBounds([-map.height, 0], [0, map.width]), { duration: 0.5 })}
+            className="panel grid h-12 w-12 place-items-center text-slate-200"
+            aria-label="Показать всю карту"
+          >
+            <IconExpand className="h-5 w-5" />
+          </button>
+          {masterMode && (
+            <button
+              onClick={() => {
+                setPlacing((v) => !v);
+                setContextMenu(null);
+              }}
+              className={`cut-corners grid h-16 w-16 place-items-center shadow-2xl ${placing ? "bg-warn text-black" : "bg-accent-2 text-black"}`}
+              aria-label={placing ? "Отменить добавление" : "Добавить метку"}
+            >
+              {placing ? <IconClose className="h-7 w-7" /> : <IconPlus className="h-8 w-8" />}
+            </button>
+          )}
         </div>
       )}
 
-      {/* ---- right-click menu ---- */}
+      {/* ---- status (bottom-left) ---- */}
+      <div
+        className={`absolute bottom-[calc(1rem+var(--safe-bottom))] z-[1050] flex max-w-[calc(100vw-110px)] flex-wrap items-center gap-2 transition-all sm:bottom-6 ${
+          panelOpen ? "hidden sm:left-[424px] sm:flex" : placing ? "left-3 hidden sm:flex" : "left-3 flex"
+        }`}
+      >
+        <span className="chip bg-panel/95 px-3 py-1 shadow-lg">
+          ◆ {visibleMarkers.length}
+          {masterMode && hiddenCount > 0 && <span className="text-warn"> · {hiddenCount} скрыто</span>}
+        </span>
+        {!isMaster && <span className="chip border-accent/50 bg-panel/95 px-3 py-1 text-accent shadow-lg">Режим игрока</span>}
+        {viewAsPlayer && <span className="chip border-info/60 bg-[#04161b]/95 px-3 py-1 text-info shadow-lg">Так видят игроки</span>}
+      </div>
+
+      {placing && (
+        <div className="absolute left-3 right-24 bottom-[calc(1rem+var(--safe-bottom))] z-[1100] border border-warn/60 bg-[#1f1503]/95 px-4 py-3 text-center font-mono text-xs uppercase tracking-wider text-warn shadow-xl sm:inset-x-0 sm:top-24 sm:bottom-auto sm:mx-auto sm:max-w-md sm:py-2">
+          <span className="sm:hidden">Коснитесь карты, чтобы поставить метку</span>
+          <span className="hidden sm:inline">Кликните на карту, чтобы поставить метку · Esc — отмена</span>
+        </div>
+      )}
+
+      {/* ---- context menu (right click / long press) ---- */}
       {contextMenu && (
-        <div className="panel absolute z-[1200] w-56 p-1 text-sm" style={{ left: contextMenu.left, top: contextMenu.top }}>
+        <div className="panel cut-corners-sm absolute z-[1200] w-56 p-1 text-sm" style={{ left: contextMenu.left, top: contextMenu.top }}>
           {masterMode && (
             <button
-              className="w-full rounded-lg px-3 py-2 text-left hover:bg-panel-2"
+              className="flex min-h-11 w-full items-center gap-2 px-3 text-left hover:bg-panel-2"
               onClick={() => {
                 setPanel({ kind: "create", x: contextMenu.x, y: contextMenu.y });
                 setContextMenu(null);
               }}
             >
-              📍 Добавить метку здесь
+              <IconPin className="h-4 w-4 text-accent-2" /> Добавить метку здесь
             </button>
           )}
           <button
-            className="w-full rounded-lg px-3 py-2 text-left hover:bg-panel-2"
+            className="flex min-h-11 w-full items-center gap-2 px-3 text-left font-mono text-xs hover:bg-panel-2"
             onClick={() => {
               navigator.clipboard?.writeText(`${Math.round(contextMenu.x)}, ${Math.round(contextMenu.y)}`);
               toast("Координаты скопированы");
@@ -519,55 +589,96 @@ export default function MapViewer({ campaignId, mapId }: { campaignId: number; m
         </div>
       )}
 
-      {/* ---- side panel (left on desktop, bottom sheet on mobile) ---- */}
+      {/* ---- marker panel: left sidebar on desktop, draggable bottom sheet on phones ---- */}
       {panel && (
-        <aside className="panel scrollbar-thin absolute inset-x-0 bottom-0 z-[1080] h-[62vh] overflow-y-auto rounded-b-none rounded-t-2xl p-5 sm:inset-y-0 sm:left-0 sm:right-auto sm:h-auto sm:w-[410px] sm:rounded-none sm:rounded-r-2xl sm:pt-[76px]">
+        <aside
+          style={{ "--sheet-h": sheetHeight } as React.CSSProperties}
+          className={`panel absolute inset-x-0 bottom-0 z-[1080] flex h-[var(--sheet-h)] flex-col border-t-accent/60 sm:inset-y-0 sm:left-0 sm:right-auto sm:h-auto sm:w-[410px] sm:border-t-line sm:pt-[calc(4.5rem+var(--safe-top))] ${
+            sheetDrag === null ? "transition-[height] duration-200" : ""
+          }`}
+        >
+          {/* drag handle (phones) */}
+          <div
+            className="flex h-7 shrink-0 cursor-grab touch-none items-center justify-center sm:hidden"
+            onPointerDown={(e) => {
+              dragStartY.current = e.clientY;
+              setSheetDrag(0);
+              e.currentTarget.setPointerCapture(e.pointerId);
+            }}
+            onPointerMove={(e) => {
+              if (dragStartY.current !== null) setSheetDrag(e.clientY - dragStartY.current);
+            }}
+            onPointerUp={() => {
+              const dy = sheetDrag ?? 0;
+              dragStartY.current = null;
+              setSheetDrag(null);
+              if (dy < -50) setSheetFullFor(panelKey);
+              else if (dy > 80) {
+                if (sheetExpanded && panel.kind === "view") setSheetFullFor(null);
+                else setPanel(null);
+              } else if (Math.abs(dy) < 6 && panel.kind === "view") {
+                setSheetFullFor(sheetExpanded ? null : panelKey);
+              }
+            }}
+            onPointerCancel={() => {
+              dragStartY.current = null;
+              setSheetDrag(null);
+            }}
+            role="button"
+            aria-label={sheetExpanded ? "Свернуть панель" : "Развернуть панель"}
+          >
+            <span className="h-1 w-12 bg-line-hi" />
+          </div>
           <button
             onClick={() => setPanel(null)}
-            className="absolute right-3 top-3 z-10 grid h-8 w-8 place-items-center rounded-full bg-black/40 text-slate-300 hover:text-white sm:top-[76px]"
+            className="absolute right-2 top-2 z-10 grid h-11 w-11 place-items-center text-muted hover:text-white sm:top-[calc(4.75rem+var(--safe-top))]"
             aria-label="Закрыть панель"
           >
-            ✕
+            <IconClose />
           </button>
-          {panel.kind === "view" && selectedMarker && (
-            <MarkerDetails
-              marker={selectedMarker}
-              type={typeById.get(selectedMarker.typeId)}
-              masterMode={masterMode}
-              notes={notes.filter((n) => n.markerId === selectedMarker.id)}
-              onEdit={() => setPanel({ kind: "edit", id: selectedMarker.id })}
-              onToggleVisibility={() => toggleVisibility(selectedMarker)}
-              onDelete={() => deleteMarker(selectedMarker)}
-              onAddNote={(content) => addNote(selectedMarker.id, content)}
-              onUpdateNote={updateNote}
-              onDeleteNote={deleteNote}
-            />
-          )}
-          {panel.kind === "edit" && selectedMarker && masterMode && (
-            <>
-              <h2 className="mb-4 text-lg font-semibold">Редактировать метку</h2>
-              <MarkerForm
-                key={selectedMarker.id}
-                types={types}
-                initial={selectedMarker}
-                position={{ x: selectedMarker.x, y: selectedMarker.y }}
-                onSubmit={(input) => updateMarker(selectedMarker.id, input)}
-                onCancel={() => setPanel({ kind: "view", id: selectedMarker.id })}
+          <div className="scrollbar-thin flex-1 overflow-y-auto overscroll-contain px-5 pb-[calc(1.25rem+var(--safe-bottom))] sm:pb-5">
+            {panel.kind === "view" && selectedMarker && (
+              <MarkerDetails
+                marker={selectedMarker}
+                type={typeById.get(selectedMarker.typeId)}
+                masterMode={masterMode}
+                notes={notes.filter((n) => n.markerId === selectedMarker.id)}
+                onEdit={() => setPanel({ kind: "edit", id: selectedMarker.id })}
+                onToggleVisibility={() => toggleVisibility(selectedMarker)}
+                onDelete={() => deleteMarker(selectedMarker)}
+                onAddNote={(content) => addNote(selectedMarker.id, content)}
+                onUpdateNote={updateNote}
+                onDeleteNote={deleteNote}
               />
-            </>
-          )}
-          {panel.kind === "create" && masterMode && (
-            <>
-              <h2 className="mb-4 text-lg font-semibold">Новая метка</h2>
-              <MarkerForm
-                key={`${panel.x}:${panel.y}`}
-                types={types}
-                position={{ x: panel.x, y: panel.y }}
-                onSubmit={createMarker}
-                onCancel={() => setPanel(null)}
-              />
-            </>
-          )}
+            )}
+            {panel.kind === "edit" && selectedMarker && masterMode && (
+              <>
+                <p className="kicker text-accent-2">{"// редактирование"}</p>
+                <h2 className="mb-4 text-lg">Изменить метку</h2>
+                <MarkerForm
+                  key={selectedMarker.id}
+                  types={types}
+                  initial={selectedMarker}
+                  position={{ x: selectedMarker.x, y: selectedMarker.y }}
+                  onSubmit={(input) => updateMarker(selectedMarker.id, input)}
+                  onCancel={() => setPanel({ kind: "view", id: selectedMarker.id })}
+                />
+              </>
+            )}
+            {panel.kind === "create" && masterMode && (
+              <>
+                <p className="kicker text-accent-2">{"// новая точка"}</p>
+                <h2 className="mb-4 text-lg">Новая метка</h2>
+                <MarkerForm
+                  key={`${panel.x}:${panel.y}`}
+                  types={types}
+                  position={{ x: panel.x, y: panel.y }}
+                  onSubmit={createMarker}
+                  onCancel={() => setPanel(null)}
+                />
+              </>
+            )}
+          </div>
         </aside>
       )}
     </div>
@@ -587,13 +698,13 @@ function TypeChip({ type, count, active, onToggle }: { type: MarkerType; count: 
   return (
     <button
       onClick={onToggle}
-      className={`chip shrink-0 whitespace-nowrap px-3 py-1.5 text-sm shadow-lg transition ${
-        active ? "border-accent bg-accent/20 text-white" : "bg-panel/95 hover:border-slate-500"
+      className={`chip min-h-9 shrink-0 whitespace-nowrap px-3 normal-case tracking-normal shadow-lg transition ${
+        active ? "border-accent bg-accent/15 text-accent" : "bg-panel/95 hover:border-line-hi"
       }`}
     >
       <MarkerGlyph shape={type.shape} color={type.color} icon={type.icon} size={18} />
-      {type.name}
-      <span className="text-xs text-slate-500">{count}</span>
+      <span className="font-sans text-[13px]">{type.name}</span>
+      <span className="text-muted">{count}</span>
     </button>
   );
 }
@@ -610,7 +721,7 @@ function buildIcon(type: MarkerType | undefined, hidden: boolean, selected: bool
   if (!icon) {
     const { svg, size, anchor } = markerSvg({ shape, color, icon: type?.icon, hidden, selected });
     // A small dot shows the player that they have personal notes on this marker.
-    const noteDot = noteCount > 0 ? '<span class="absolute -bottom-0.5 -left-0.5 h-2.5 w-2.5 rounded-full border border-slate-900 bg-accent"></span>' : "";
+    const noteDot = noteCount > 0 ? '<span class="absolute -bottom-0.5 -left-0.5 h-2.5 w-2.5 rotate-45 border border-black bg-accent"></span>' : "";
     icon = L.divIcon({
       html: `<span class="relative block">${svg}${noteDot}</span>`,
       className: `dm-marker${hidden ? " is-hidden" : ""}${selected ? " is-selected" : ""}`,
@@ -623,7 +734,7 @@ function buildIcon(type: MarkerType | undefined, hidden: boolean, selected: bool
 }
 
 const DRAFT_ICON = (() => {
-  const { svg, size, anchor } = markerSvg({ shape: "PIN", color: "#22D3EE", icon: "＋", selected: true });
+  const { svg, size, anchor } = markerSvg({ shape: "PIN", color: "#3DFF9E", icon: "＋", selected: true });
   return L.divIcon({ html: svg, className: "dm-marker is-selected", iconSize: size, iconAnchor: anchor });
 })();
 
@@ -635,7 +746,13 @@ function FitToImage({ width, height }: { width: number; height: number }) {
     const fitZoom = map.getBoundsZoom(bounds);
     map.setMinZoom(fitZoom - 1);
     map.setMaxZoom(Math.max(fitZoom + 5, 3));
-    map.fitBounds(bounds, { animate: false });
+    const size = map.getSize();
+    if (size.x < 640 && size.y > size.x) {
+      // Portrait phones: fill the screen like a maps app instead of a thin strip in the middle.
+      map.setView(bounds.getCenter(), map.getBoundsZoom(bounds, true), { animate: false });
+    } else {
+      map.fitBounds(bounds, { animate: false });
+    }
   }, [map, width, height]);
   return null;
 }
@@ -667,7 +784,7 @@ function CursorReadout() {
   });
   if (!pos) return null;
   return (
-    <div className="pointer-events-none absolute bottom-6 left-1/2 z-[1000] hidden -translate-x-1/2 rounded-md bg-black/60 px-2 py-0.5 font-mono text-[11px] text-slate-300 sm:block">
+    <div className="pointer-events-none absolute bottom-6 left-1/2 z-[1000] hidden -translate-x-1/2 bg-black/70 px-2 py-0.5 font-mono text-[11px] text-accent sm:block">
       {Math.round(pos.x)}, {Math.round(pos.y)}
     </div>
   );

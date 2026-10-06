@@ -1,18 +1,23 @@
 import { redirect } from "next/navigation";
+import { Logo } from "@/components/Logo";
+import { IconId, IconLock, IconMap } from "@/components/icons";
 import { getCurrentUser, loginUrl } from "@/lib/session";
 
 const FEATURES = [
   {
-    title: "Интерактивные карты",
-    text: "Загрузите карту города или района и работайте с ней как в Google Maps: зум, поиск, фильтры по типам меток.",
+    icon: IconMap,
+    title: "AR-карта района",
+    text: "Загрузите карту метроплекса и ведите её как в Google Maps: зум, поиск, фильтры, метки разных форм и цветов.",
   },
   {
-    title: "Секреты мастера",
-    text: "Скрытые метки и тайные заметки видны только мастеру. Открывайте локации игрокам одним кликом, когда они их найдут.",
+    icon: IconLock,
+    title: "Тайны мастера",
+    text: "Скрытые локации и заметки видит только мастер. Раннеры нашли убежище — откройте метку одним касанием.",
   },
   {
-    title: "Кабинет игрока",
-    text: "Лист персонажа Shadowrun с подсчётом мониторов и пулов, личный дневник героя и журнал прошедших сессий.",
+    icon: IconId,
+    title: "Кабинет раннера",
+    text: "Лист персонажа по правилам 20th Anniversary Edition: мониторы, пулы, Грань, броня, импланты, дневник и логи забегов.",
   },
 ];
 
@@ -21,27 +26,37 @@ export default async function Home() {
   if (user) redirect("/campaigns");
 
   return (
-    <main className="mx-auto flex min-h-screen max-w-5xl flex-col justify-center px-6 py-16">
-      <p className="mb-3 font-mono text-xs uppercase tracking-[0.4em] text-accent">{"// jack in"}</p>
-      <h1 className="text-4xl font-bold leading-tight sm:text-6xl">
-        Shadowrun <span className="bg-gradient-to-r from-accent to-accent-2 bg-clip-text text-transparent">DM Assistant</span>
-      </h1>
-      <p className="mt-5 max-w-2xl text-lg text-slate-400">
-        Рабочее место мастера настольных ролевых игр: карта мира с метками, тайны, которые игроки ещё не раскрыли,
-        листы персонажей и логи прошедших забегов.
-      </p>
-      <div className="mt-8 flex flex-wrap gap-3">
-        <a href={loginUrl()} className="btn-primary px-6 py-3 text-base">Войти</a>
-        <a href={`${loginUrl()}&screen_hint=signup`} className="btn-ghost px-6 py-3 text-base">Регистрация</a>
-      </div>
-      <div className="mt-16 grid gap-4 sm:grid-cols-3">
+    <main className="relative mx-auto flex min-h-[100dvh] max-w-5xl flex-col px-5 pt-[calc(1.5rem+var(--safe-top))] pb-[calc(2rem+var(--safe-bottom))]">
+      <Logo href="/" />
+
+      <section className="flex flex-1 flex-col justify-center py-14">
+        <p className="kicker cursor-blink">{"> jack in // Seattle 2072"}</p>
+        <h1 className="mt-4 text-5xl leading-[0.95] sm:text-7xl">
+          <span className="glitch glow text-accent" data-text="SHADOWRUN">SHADOWRUN</span>
+          <span className="mt-2 block text-2xl text-slate-200 sm:text-4xl">DM Assistant</span>
+        </h1>
+        <p className="mt-6 max-w-xl text-base text-slate-400 sm:text-lg">
+          Пульт мастера Шестого мира: карта с метками и тайнами, листы раннеров по правилам
+          Shadowrun 20th Anniversary Edition и хроника забегов. Работает в браузере и на телефоне.
+        </p>
+        <div className="mt-8 flex flex-col gap-3 sm:flex-row">
+          <a href={loginUrl()} className="btn-primary px-8 py-3 text-sm">Войти в сеть</a>
+          <a href={`${loginUrl()}&screen_hint=signup`} className="btn-ghost px-8 py-3 text-sm">Регистрация</a>
+        </div>
+      </section>
+
+      <section className="grid gap-3 sm:grid-cols-3">
         {FEATURES.map((f) => (
-          <div key={f.title} className="panel p-5">
-            <h2 className="mb-2 font-semibold text-slate-100">{f.title}</h2>
-            <p className="text-sm text-slate-400">{f.text}</p>
+          <div key={f.title} className="panel cut-corners hud-brackets p-5">
+            <f.icon className="h-6 w-6 text-accent" />
+            <h2 className="mt-3 text-base text-slate-100">{f.title}</h2>
+            <p className="mt-2 text-sm text-slate-400">{f.text}</p>
           </div>
         ))}
-      </div>
+      </section>
+      <p className="mt-8 text-center font-mono text-[10px] uppercase tracking-[0.3em] text-slate-600">
+        Fan-made tool · Shadowrun is a trademark of its respective owners
+      </p>
     </main>
   );
 }

@@ -87,16 +87,16 @@ export function markerSvg({ shape, color, icon, hidden, selected }: MarkerSvgOpt
   anchor: [number, number];
 } {
   const g = geometry(shape);
-  const stroke = selected ? "#22d3ee" : "#ffffff";
+  const stroke = selected ? "#3dff9e" : "#ffffff";
   const dash = hidden ? ' stroke-dasharray="4 3"' : "";
   const glyph = icon
     ? `<text x="18" y="${g.glyphY}" text-anchor="middle" dominant-baseline="central" font-size="15">${escapeHtml(icon)}</text>`
     : "";
   // A small crossed-eye badge tells masters at a glance that players can't see this marker.
   const hiddenBadge = hidden
-    ? '<g transform="translate(27 1)"><circle cx="5" cy="5" r="6" fill="#0f1522" stroke="#fbbf24" stroke-width="1.5"/>' +
-      '<path d="M1.5 5 Q5 1.5 8.5 5 Q5 8.5 1.5 5 Z" fill="none" stroke="#fbbf24" stroke-width="1.1"/>' +
-      '<line x1="1.5" y1="8.5" x2="8.5" y2="1.5" stroke="#fbbf24" stroke-width="1.3"/></g>'
+    ? '<g transform="translate(27 1)"><circle cx="5" cy="5" r="6" fill="#05080a" stroke="#ffb020" stroke-width="1.5"/>' +
+      '<path d="M1.5 5 Q5 1.5 8.5 5 Q5 8.5 1.5 5 Z" fill="none" stroke="#ffb020" stroke-width="1.1"/>' +
+      '<line x1="1.5" y1="8.5" x2="8.5" y2="1.5" stroke="#ffb020" stroke-width="1.3"/></g>'
     : "";
   const svg =
     `<svg xmlns="http://www.w3.org/2000/svg" width="${g.width}" height="${g.height}" viewBox="0 0 ${g.width} ${g.height}">` +

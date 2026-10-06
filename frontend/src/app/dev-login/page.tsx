@@ -14,10 +14,10 @@ export default async function DevLoginPage(props: PageProps<"/dev-login">) {
   const returnTo = safeReturnTo(query.returnTo);
 
   return (
-    <main className="flex min-h-screen items-center justify-center p-6">
-      <div className="panel w-full max-w-md p-8">
-        <p className="mb-1 font-mono text-xs uppercase tracking-[0.3em] text-amber-400">dev mode</p>
-        <h1 className="mb-2 text-2xl font-semibold">Локальный вход</h1>
+    <main className="flex min-h-[100dvh] items-center justify-center p-4">
+      <div className="panel cut-corners hud-brackets w-full max-w-md p-6 sm:p-8">
+        <p className="kicker mb-2 text-warn">{"// dev mode"}</p>
+        <h1 className="mb-2 text-2xl">Локальный вход</h1>
         <p className="mb-6 text-sm text-slate-400">
           Auth0 отключён (AUTH_MODE=dev). Введите любое имя — под ним вы попадёте в систему. Разные имена — разные
           пользователи, так удобно проверять роли владельца, мастера и игрока.

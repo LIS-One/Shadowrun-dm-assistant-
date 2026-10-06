@@ -20,26 +20,26 @@ export default function MapsPage() {
     <>
       <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h2 className="text-xl font-semibold">Карты кампании</h2>
+          <h2 className="text-xl">Карты кампании</h2>
           <p className="text-sm text-slate-400">
             {isMaster
               ? "Загружайте карты и расставляйте метки. Скрытые метки видите только вы."
               : "Открывайте карты, изучайте метки и ведите личные заметки."}
           </p>
         </div>
-        {isMaster && <button className="btn-primary" onClick={() => setUploading(true)}>+ Загрузить карту</button>}
+        {isMaster && <button className="btn-primary w-full sm:w-auto" onClick={() => setUploading(true)}>+ Загрузить карту</button>}
       </div>
 
       {error && <p className="text-red-400">{errorMessage(error)}</p>}
       {maps?.length === 0 && (
-        <div className="panel p-10 text-center text-slate-400">
+        <div className="panel cut-corners hud-brackets p-8 text-center text-slate-400 sm:p-10">
           {isMaster ? "Загрузите первую карту — PNG, JPEG, GIF или WebP." : "Мастер ещё не загрузил ни одной карты."}
         </div>
       )}
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {maps?.map((m) => (
-          <div key={m.id} className="panel group overflow-hidden">
+          <div key={m.id} className="panel cut-corners group overflow-hidden transition hover:border-accent/60">
             <Link href={`/campaigns/${campaignId}/maps/${m.id}`} className="block">
               <div className="relative aspect-video overflow-hidden bg-black">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -49,11 +49,12 @@ export default function MapsPage() {
                   loading="lazy"
                   className="h-full w-full object-cover opacity-80 transition duration-300 group-hover:scale-105 group-hover:opacity-100"
                 />
-                <span className="chip absolute bottom-2 left-2 bg-black/70">📍 {m.markerCount}</span>
+                <span className="chip absolute bottom-2 left-2 border-accent/50 bg-black/80 text-accent">◆ {m.markerCount} меток</span>
+                <span className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent" />
               </div>
               <div className="p-4">
-                <h3 className="font-semibold">{m.name}</h3>
-                <p className="text-xs text-slate-500">
+                <h3>{m.name}</h3>
+                <p className="font-mono text-[11px] text-muted">
                   {m.width}×{m.height}px
                 </p>
                 {m.description && <p className="mt-1 line-clamp-2 text-sm text-slate-400">{m.description}</p>}
@@ -61,7 +62,7 @@ export default function MapsPage() {
             </Link>
             {isMaster && (
               <div className="flex gap-2 border-t border-line px-4 py-2">
-                <button className="text-xs text-slate-400 hover:text-white" onClick={() => setEditing(m)}>
+                <button className="min-h-11 font-mono text-xs uppercase tracking-wider text-muted hover:text-accent sm:min-h-0" onClick={() => setEditing(m)}>
                   Изменить
                 </button>
               </div>
@@ -148,7 +149,7 @@ function UploadMapDialog({ campaignId, onClose, onDone }: { campaignId: number; 
             name="file"
             required
             accept="image/png,image/jpeg,image/gif,image/webp"
-            className="input file:mr-3 file:rounded file:border-0 file:bg-panel-2 file:px-3 file:py-1 file:text-slate-200"
+            className="input file:mr-3 file:border-0 file:bg-panel-2 file:px-3 file:py-1 file:font-mono file:text-xs file:uppercase file:text-accent"
             onChange={(e) => {
               const f = e.target.files?.[0];
               setPreview(f ? URL.createObjectURL(f) : null);
@@ -157,7 +158,7 @@ function UploadMapDialog({ campaignId, onClose, onDone }: { campaignId: number; 
         </label>
         {preview && (
           // eslint-disable-next-line @next/next/no-img-element
-          <img src={preview} alt="" className="max-h-48 w-full rounded-lg object-contain bg-black" />
+          <img src={preview} alt="" className="max-h-48 w-full bg-black object-contain" />
         )}
         <label className="block">
           <span className="label">Название</span>

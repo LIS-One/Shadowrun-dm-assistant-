@@ -54,24 +54,24 @@ export default function MembersPage() {
   return (
     <div className="grid gap-8 lg:grid-cols-3">
       <section className="lg:col-span-2">
-        <h2 className="mb-4 text-xl font-semibold">Участники</h2>
-        <div className="panel divide-y divide-line">
+        <h2 className="mb-4 text-xl">Команда</h2>
+        <div className="panel cut-corners divide-y divide-line">
           {members?.map((m) => (
             <div key={m.id} className="flex flex-wrap items-center gap-3 p-4">
               {m.avatarUrl ? (
                 // eslint-disable-next-line @next/next/no-img-element
-                <img src={m.avatarUrl} alt="" className="h-9 w-9 rounded-full" />
+                <img src={m.avatarUrl} alt="" className="h-10 w-10 border border-line-hi" />
               ) : (
-                <span className="grid h-9 w-9 place-items-center rounded-full bg-panel-2">{m.displayName.slice(0, 1)}</span>
+                <span className="grid h-10 w-10 place-items-center border border-line-hi bg-panel-2 font-display text-accent">{m.displayName.slice(0, 1)}</span>
               )}
               <div className="min-w-0 flex-1">
                 <p className="truncate font-medium">
                   {m.displayName} {m.userId === me?.id && <span className="text-xs text-slate-500">(вы)</span>}
                 </p>
-                <p className="text-xs text-slate-500">с {new Date(m.joinedAt).toLocaleDateString("ru-RU")}</p>
+                <p className="font-mono text-[11px] text-muted">с {new Date(m.joinedAt).toLocaleDateString("ru-RU")}</p>
               </div>
               {isOwner ? (
-                <select value={m.role} onChange={(e) => changeRole(m, e.target.value as CampaignRole)} className="input w-36">
+                <select value={m.role} onChange={(e) => changeRole(m, e.target.value as CampaignRole)} className="input w-full sm:w-36">
                   {(Object.keys(ROLE_LABELS) as CampaignRole[]).map((r) => (
                     <option key={r} value={r}>{ROLE_LABELS[r]}</option>
                   ))}
@@ -80,14 +80,14 @@ export default function MembersPage() {
                 <span className="chip">{ROLE_LABELS[m.role]}</span>
               )}
               {(isOwner || m.userId === me?.id) && (
-                <button onClick={() => removeMember(m)} className="text-xs text-slate-500 hover:text-red-300">
+                <button onClick={() => removeMember(m)} className="min-h-11 font-mono text-[11px] uppercase text-muted hover:text-red-300">
                   {m.userId === me?.id ? "Покинуть" : "Исключить"}
                 </button>
               )}
             </div>
           ))}
         </div>
-        <div className="mt-4 text-sm text-slate-400">
+        <div className="mt-4 space-y-1 text-sm text-slate-400">
           <p><b className="text-slate-200">Владелец</b> — управляет участниками и ролями, может всё, что и мастер.</p>
           <p><b className="text-slate-200">Мастер</b> — карты, метки (в т.ч. скрытые), тайные заметки, логи игр.</p>
           <p><b className="text-slate-200">Игрок</b> — видит открытые метки, ведёт личные заметки и лист персонажа.</p>
@@ -96,10 +96,10 @@ export default function MembersPage() {
 
       <aside className="space-y-6">
         {campaign?.inviteCode && (
-          <div className="panel p-5">
+          <div className="panel cut-corners hud-brackets p-5">
             <h3 className="label">Код приглашения</h3>
             <div className="flex items-center gap-2">
-              <code className="flex-1 rounded-lg bg-bg/60 px-3 py-2 text-center font-mono text-lg tracking-[0.25em] text-accent">{campaign.inviteCode}</code>
+              <code className="glow flex-1 bg-bg/60 px-3 py-2 text-center font-mono text-lg tracking-[0.25em] text-accent">{campaign.inviteCode}</code>
               <button
                 className="btn-ghost"
                 onClick={() => {
@@ -110,8 +110,8 @@ export default function MembersPage() {
                 ⧉
               </button>
             </div>
-            <p className="mt-2 text-xs text-slate-500">Новые участники присоединяются как игроки.</p>
-            {isOwner && <button onClick={regenerateCode} className="mt-3 text-xs text-slate-400 hover:text-white">Сгенерировать новый код</button>}
+            <p className="mt-2 text-xs text-muted">Новые участники присоединяются как игроки.</p>
+            {isOwner && <button onClick={regenerateCode} className="mt-2 min-h-11 font-mono text-[11px] uppercase text-muted hover:text-accent">Сгенерировать новый код</button>}
           </div>
         )}
         {isOwner && campaign && <CampaignSettings campaign={campaign} />}
@@ -158,7 +158,7 @@ function CampaignSettings({ campaign }: { campaign: Campaign }) {
   }
 
   return (
-    <form onSubmit={save} className="panel space-y-3 p-5">
+    <form onSubmit={save} className="panel cut-corners space-y-3 p-5">
       <h3 className="label">Настройки кампании</h3>
       <input name="name" required maxLength={120} defaultValue={campaign.name} className="input" />
       <textarea name="description" rows={3} maxLength={5000} defaultValue={campaign.description ?? ""} className="input" />
@@ -191,10 +191,10 @@ function MarkerTypeCatalogue({ base }: { base: string }) {
 
   return (
     <div>
-      <div className="mb-4 flex items-center justify-between">
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h2 className="text-xl font-semibold">Каталог меток</h2>
-          <p className="text-sm text-slate-400">Уникальные формы и цвета для разных типов локаций. Добавьте свои типы для этой кампании.</p>
+          <h2 className="text-xl">Каталог меток</h2>
+          <p className="text-sm text-muted">Уникальные формы и цвета для разных типов локаций. Добавьте свои типы для этой кампании.</p>
         </div>
         <button className="btn-primary" onClick={() => setEditing("new")}>+ Свой тип</button>
       </div>
@@ -203,11 +203,11 @@ function MarkerTypeCatalogue({ base }: { base: string }) {
           <h3 className="label">Типы кампании</h3>
           <div className="mb-6 grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
             {custom.map((t) => (
-              <div key={t.id} className="panel flex items-center gap-3 p-3">
+              <div key={t.id} className="panel cut-corners-sm flex items-center gap-2 p-2 pl-3">
                 <MarkerGlyph shape={t.shape} color={t.color} icon={t.icon} size={30} />
                 <span className="flex-1 truncate text-sm">{t.name}</span>
-                <button className="text-xs text-slate-500 hover:text-white" onClick={() => setEditing(t)}>✎</button>
-                <button className="text-xs text-slate-500 hover:text-red-300" onClick={() => remove(t)}>✕</button>
+                <button className="grid h-11 w-11 place-items-center text-muted hover:text-accent" onClick={() => setEditing(t)} aria-label="Изменить">✎</button>
+                <button className="grid h-11 w-11 place-items-center text-muted hover:text-red-300" onClick={() => remove(t)} aria-label="Удалить">✕</button>
               </div>
             ))}
           </div>
@@ -216,7 +216,7 @@ function MarkerTypeCatalogue({ base }: { base: string }) {
       <h3 className="label">Встроенные</h3>
       <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
         {builtIn.map((t) => (
-          <div key={t.id} className="flex items-center gap-3 rounded-xl border border-line/60 p-3">
+          <div key={t.id} className="flex items-center gap-3 border border-line/60 p-3">
             <MarkerGlyph shape={t.shape} color={t.color} icon={t.icon} size={30} />
             <span className="truncate text-sm text-slate-300">{t.name}</span>
           </div>
@@ -272,7 +272,7 @@ function MarkerTypeDialog({ url, type, onClose, onSaved }: { url: string; type: 
                 type="button"
                 key={s}
                 onClick={() => setShape(s)}
-                className={`flex flex-col items-center gap-1 rounded-lg border p-2 text-[11px] ${s === shape ? "border-accent bg-accent/10" : "border-line hover:border-slate-500"}`}
+                className={`flex min-h-16 flex-col items-center justify-center gap-1 border p-2 text-[11px] ${s === shape ? "border-accent bg-accent/10" : "border-line hover:border-line-hi"}`}
               >
                 <MarkerGlyph shape={s} color={color} size={26} />
                 {SHAPE_LABELS[s]}
@@ -284,7 +284,7 @@ function MarkerTypeDialog({ url, type, onClose, onSaved }: { url: string; type: 
           <label className="block">
             <span className="label">Цвет</span>
             <div className="flex gap-2">
-              <input type="color" value={color} onChange={(e) => setColor(e.target.value.toUpperCase())} className="h-10 w-12 cursor-pointer rounded border border-line bg-transparent" />
+              <input type="color" value={color} onChange={(e) => setColor(e.target.value.toUpperCase())} className="h-11 w-12 shrink-0 cursor-pointer border border-line bg-transparent" />
               <input value={color} onChange={(e) => setColor(e.target.value)} pattern="^#[0-9A-Fa-f]{6}$" className="input font-mono" />
             </div>
           </label>

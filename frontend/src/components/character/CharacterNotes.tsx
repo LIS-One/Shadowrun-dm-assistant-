@@ -40,14 +40,14 @@ export function CharacterNotes({ url }: { url: string }) {
     <div>
       <div className="mb-4 flex items-center justify-between">
         <div>
-          <h3 className="text-lg font-semibold">Дневник персонажа</h3>
-          <p className="text-xs text-slate-500">Личные заметки — их видите только вы.</p>
+          <h3 className="text-lg">Дневник раннера</h3>
+          <p className="text-xs text-muted">Личные заметки — их видите только вы.</p>
         </div>
         {editing === null && <button className="btn-primary" onClick={() => setEditing("new")}>+ Заметка</button>}
       </div>
 
       {editing !== null && (
-        <form onSubmit={save} className="panel mb-4 space-y-3 p-4">
+        <form onSubmit={save} className="panel cut-corners mb-4 space-y-3 p-4">
           <input
             name="title"
             required
@@ -72,19 +72,19 @@ export function CharacterNotes({ url }: { url: string }) {
         </form>
       )}
 
-      {notes?.length === 0 && editing === null && <p className="text-sm text-slate-500">Заметок пока нет.</p>}
+      {notes?.length === 0 && editing === null && <p className="text-sm text-muted">Заметок пока нет.</p>}
       <div className="grid gap-3 md:grid-cols-2">
         {notes?.map((n) => (
-          <article key={n.id} className="panel p-4">
+          <article key={n.id} className="panel cut-corners p-4">
             <div className="flex items-start justify-between gap-2">
-              <h4 className="font-medium">{n.title}</h4>
-              <div className="flex shrink-0 gap-2 text-xs text-slate-500">
-                <button className="hover:text-white" onClick={() => setEditing(n)}>изменить</button>
-                <button className="hover:text-red-300" onClick={() => remove(n)}>удалить</button>
+              <h4 className="font-display">{n.title}</h4>
+              <div className="flex shrink-0 font-mono text-[11px] uppercase text-muted">
+                <button className="min-h-9 px-2 hover:text-accent" onClick={() => setEditing(n)}>изменить</button>
+                <button className="min-h-9 px-2 hover:text-red-300" onClick={() => remove(n)}>удалить</button>
               </div>
             </div>
             {n.content && <p className="mt-2 whitespace-pre-wrap text-sm text-slate-300">{n.content}</p>}
-            <p className="mt-2 text-[11px] text-slate-600">{new Date(n.updatedAt).toLocaleString("ru-RU")}</p>
+            <p className="mt-2 font-mono text-[11px] text-slate-600">{new Date(n.updatedAt).toLocaleString("ru-RU")}</p>
           </article>
         ))}
       </div>

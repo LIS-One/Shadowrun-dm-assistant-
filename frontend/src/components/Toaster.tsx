@@ -27,17 +27,17 @@ export function Toaster({ children }: { children: React.ReactNode }) {
   return (
     <ToastContext.Provider value={push}>
       {children}
-      <div className="pointer-events-none fixed bottom-6 left-1/2 z-[2000] flex -translate-x-1/2 flex-col items-center gap-2">
+      <div className="pointer-events-none fixed top-[calc(4.25rem+var(--safe-top))] left-1/2 z-[2000] flex w-[calc(100%-2rem)] -translate-x-1/2 flex-col items-center gap-2 sm:top-auto sm:bottom-6 sm:w-auto">
         {toasts.map((t) => (
           <div
             key={t.id}
             role="status"
-            className={`pointer-events-auto rounded-xl border px-4 py-2 text-sm shadow-xl backdrop-blur ${
+            className={`cut-corners-sm pointer-events-auto border px-4 py-2 font-mono text-xs uppercase tracking-wider shadow-xl backdrop-blur ${
               t.kind === "error"
-                ? "border-red-500/50 bg-red-950/90 text-red-100"
+                ? "border-danger/60 bg-[#2a0710]/95 text-red-200"
                 : t.kind === "success"
-                  ? "border-emerald-500/40 bg-emerald-950/90 text-emerald-100"
-                  : "border-line bg-panel/95 text-slate-100"
+                  ? "border-accent/50 bg-[#03190e]/95 text-accent"
+                  : "border-line-hi bg-panel/95 text-slate-100"
             }`}
           >
             {t.text}

@@ -10,9 +10,9 @@ import { api, errorMessage, fetcher } from "@/lib/api";
 import { ROLE_LABELS, type Campaign } from "@/lib/types";
 
 const ROLE_STYLES = {
-  OWNER: "border-amber-400/40 text-amber-300",
-  MASTER: "border-accent-2/40 text-fuchsia-300",
-  PLAYER: "border-accent/40 text-cyan-300",
+  OWNER: "border-warn/60 text-warn",
+  MASTER: "border-accent-2/60 text-accent-2",
+  PLAYER: "border-accent/60 text-accent",
 } as const;
 
 export default function CampaignsPage() {
@@ -20,23 +20,23 @@ export default function CampaignsPage() {
   const [dialog, setDialog] = useState<"create" | "join" | null>(null);
 
   return (
-    <main className="mx-auto max-w-6xl px-4 py-10">
-      <div className="mb-8 flex flex-wrap items-end justify-between gap-4">
+    <main className="mx-auto max-w-6xl px-4 py-6 pb-[calc(2rem+var(--safe-bottom))] sm:py-10">
+      <div className="mb-6 flex flex-wrap items-end justify-between gap-4 sm:mb-8">
         <div>
-          <p className="font-mono text-xs uppercase tracking-[0.3em] text-accent">{"// кампании"}</p>
-          <h1 className="mt-1 text-3xl font-bold">Ваши игры</h1>
+          <p className="kicker">{"// кампании"}</p>
+          <h1 className="mt-1 text-3xl">Ваши забеги</h1>
         </div>
-        <div className="flex gap-2">
-          <button className="btn-ghost" onClick={() => setDialog("join")}>Присоединиться по коду</button>
-          <button className="btn-primary" onClick={() => setDialog("create")}>+ Новая кампания</button>
+        <div className="grid w-full grid-cols-2 gap-2 sm:flex sm:w-auto">
+          <button className="btn-ghost" onClick={() => setDialog("join")}>По коду</button>
+          <button className="btn-primary" onClick={() => setDialog("create")}>+ Кампания</button>
         </div>
       </div>
 
       {isLoading && <p className="text-slate-400">Загрузка…</p>}
       {error && <p className="text-red-400">{errorMessage(error)}</p>}
       {campaigns && campaigns.length === 0 && (
-        <div className="panel p-10 text-center">
-          <h2 className="text-lg font-semibold">Пока ни одной кампании</h2>
+        <div className="panel cut-corners hud-brackets p-8 text-center sm:p-10">
+          <h2 className="text-lg">Пока ни одной кампании</h2>
           <p className="mx-auto mt-2 max-w-md text-sm text-slate-400">
             Создайте свою кампанию — вы станете её владельцем — или введите код приглашения, который дал мастер.
           </p>
@@ -48,9 +48,9 @@ export default function CampaignsPage() {
           <Link key={c.id} href={`/campaigns/${c.id}`} className="card-link">
             <div className="mb-3 flex items-center justify-between">
               <span className={`chip ${ROLE_STYLES[c.myRole]}`}>{ROLE_LABELS[c.myRole]}</span>
-              <span className="text-xs text-slate-500">{c.memberCount} участн.</span>
+              <span className="font-mono text-[11px] text-muted">{c.memberCount} участн.</span>
             </div>
-            <h2 className="text-lg font-semibold">{c.name}</h2>
+            <h2 className="text-lg">{c.name}</h2>
             {c.description && <p className="mt-1 line-clamp-2 text-sm text-slate-400">{c.description}</p>}
           </Link>
         ))}
@@ -88,7 +88,7 @@ function CreateCampaignDialog({ onClose }: { onClose: () => void }) {
       <form onSubmit={submit} className="space-y-4">
         <label className="block">
           <span className="label">Название</span>
-          <input name="name" required maxLength={120} className="input" placeholder="Сиэтл, 2080" autoFocus />
+          <input name="name" required maxLength={120} className="input" placeholder="Сиэтл, 2072" autoFocus />
         </label>
         <label className="block">
           <span className="label">Описание</span>

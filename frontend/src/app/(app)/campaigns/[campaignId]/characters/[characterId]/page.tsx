@@ -78,33 +78,37 @@ export default function CharacterPage(props: PageProps<"/campaigns/[campaignId]/
 
   return (
     <div>
-      <Link href={`/campaigns/${campaignId}/cabinet`} className="text-xs text-slate-400 hover:text-slate-200">← Кабинет</Link>
-      <div className="mt-2 mb-5 flex flex-wrap items-center gap-3">
-        <input
-          value={name}
-          readOnly={readOnly}
-          onChange={(e) => setDraft({ name: e.target.value, sheet: sheet })}
-          className="min-w-0 flex-1 bg-transparent text-3xl font-bold outline-none"
-          aria-label="Имя персонажа"
-        />
+      <Link href={`/campaigns/${campaignId}/cabinet`} className="font-mono text-[11px] uppercase tracking-wider text-muted hover:text-accent">← Кабинет</Link>
+      <div className="mt-2 mb-4 flex flex-wrap items-end gap-3">
+        <div className="min-w-0 flex-1">
+          <p className="kicker">{"// раннер · SR4A"}</p>
+          <input
+            value={name}
+            readOnly={readOnly}
+            onChange={(e) => setDraft({ name: e.target.value, sheet: sheet })}
+            className="w-full min-w-0 bg-transparent font-display text-3xl text-slate-100 outline-none sm:text-4xl"
+            aria-label="Имя персонажа"
+          />
+          <p className="font-mono text-xs text-muted">{[sheet.metatype, sheet.role].filter(Boolean).join(" · ")}</p>
+        </div>
         {readOnly ? (
-          <span className="chip">Только просмотр · игрок {data.ownerName}</span>
+          <span className="chip border-info/50 text-info">Только просмотр · игрок {data.ownerName}</span>
         ) : (
-          <>
+          <div className="hidden gap-2 sm:flex">
             <button onClick={save} disabled={!dirty || saving} className="btn-primary">
-              {saving ? "Сохранение…" : dirty ? "Сохранить (Ctrl+S)" : "Сохранено"}
+              {saving ? "Сохранение…" : dirty ? "Сохранить · Ctrl+S" : "Сохранено"}
             </button>
             <button onClick={remove} className="btn-danger">Удалить</button>
-          </>
+          </div>
         )}
       </div>
 
       {data.editable && (
-        <div className="mb-5 inline-flex rounded-lg border border-line p-1 text-sm">
-          <button onClick={() => setView("sheet")} className={`rounded-md px-4 py-1.5 ${view === "sheet" ? "bg-panel-2 text-white" : "text-slate-400"}`}>
-            Лист персонажа
+        <div className="mb-4 grid grid-cols-2 border border-line p-1 font-mono text-xs uppercase tracking-wider sm:inline-grid">
+          <button onClick={() => setView("sheet")} className={`min-h-10 px-4 ${view === "sheet" ? "bg-accent text-black" : "text-muted"}`}>
+            Лист
           </button>
-          <button onClick={() => setView("notes")} className={`rounded-md px-4 py-1.5 ${view === "notes" ? "bg-panel-2 text-white" : "text-slate-400"}`}>
+          <button onClick={() => setView("notes")} className={`min-h-10 px-4 ${view === "notes" ? "bg-accent text-black" : "text-muted"}`}>
             Дневник
           </button>
         </div>
@@ -118,6 +122,21 @@ export default function CharacterPage(props: PageProps<"/campaigns/[campaignId]/
         />
       ) : (
         <CharacterNotes url={`${url}/notes`} />
+      )}
+
+      {data.editable && (
+        <div className="mt-8 sm:hidden">
+          <button onClick={remove} className="btn-danger w-full">Удалить персонажа</button>
+        </div>
+      )}
+
+      {/* phones: save bar above the tab bar while there are unsaved changes */}
+      {data.editable && dirty && (
+        <div className="fixed inset-x-0 bottom-[calc(4rem+var(--safe-bottom))] z-30 border-t border-accent/40 bg-bg/95 px-4 py-2 backdrop-blur sm:hidden">
+          <button onClick={save} disabled={saving} className="btn-primary w-full">
+            {saving ? "Сохранение…" : "Сохранить изменения"}
+          </button>
+        </div>
       )}
     </div>
   );
