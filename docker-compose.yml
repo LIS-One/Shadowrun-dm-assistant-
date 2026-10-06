@@ -1,0 +1,54 @@
+# Full stack: PostgreSQL + Spring Boot API + Next.js frontend.
+# Copy .env.example to .env and fill in Auth0 settings (or switch to the local dev login).
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: dm_assistant
+      POSTGRES_USER: dm_assistant
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-dm_assistant}
+    volumes:
+      - db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U dm_assistant"]
+      interval: 5s
+      retries: 10
+
+  backend:
+    build: ./backend
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DB_URL: jdbc:postgresql://db:5432/dm_assistant
+      DB_USERNAME: dm_assistant
+      DB_PASSWORD: ${DB_PASSWORD:-dm_assistant}
+      AUTH0_ISSUER: ${AUTH0_ISSUER:-}
+      AUTH0_AUDIENCE: ${AUTH0_AUDIENCE:-}
+      DEV_AUTH_ENABLED: ${DEV_AUTH_ENABLED:-false}
+      DEV_AUTH_SECRET: ${DEV_AUTH_SECRET:-}
+    volumes:
+      - map-images:/data/maps
+    ports:
+      - "8080:8080"
+
+  frontend:
+    build: ./frontend
+    depends_on:
+      - backend
+    environment:
+      BACKEND_URL: http://backend:8080
+      APP_BASE_URL: ${APP_BASE_URL:-http://localhost:3000}
+      AUTH_MODE: ${AUTH_MODE:-auth0}
+      AUTH0_DOMAIN: ${AUTH0_DOMAIN:-}
+      AUTH0_CLIENT_ID: ${AUTH0_CLIENT_ID:-}
+      AUTH0_CLIENT_SECRET: ${AUTH0_CLIENT_SECRET:-}
+      AUTH0_SECRET: ${AUTH0_SECRET:-}
+      AUTH0_AUDIENCE: ${AUTH0_AUDIENCE:-}
+      DEV_AUTH_SECRET: ${DEV_AUTH_SECRET:-}
+    ports:
+      - "3000:3000"
+
+volumes:
+  db-data:
+  map-images:
