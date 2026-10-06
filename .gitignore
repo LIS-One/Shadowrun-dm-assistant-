@@ -1,0 +1,21 @@
+# Java / Maven
+backend/target/
+backend/data/
+*.class
+
+# Node / Next.js
+frontend/node_modules/
+frontend/.next/
+frontend/out/
+frontend/next-env.d.ts
+*.tsbuildinfo
+
+# Env files
+.env
+.env*.local
+
+# IDE / OS
+.idea/
+.vscode/
+*.iml
+.DS_Store
