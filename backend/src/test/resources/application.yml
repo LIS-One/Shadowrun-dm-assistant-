@@ -1,0 +1,21 @@
+spring:
+  datasource:
+    url: jdbc:h2:mem:dm_assistant_test;MODE=PostgreSQL;DATABASE_TO_LOWER=TRUE
+    username: sa
+    password:
+  jpa:
+    open-in-view: false
+    hibernate:
+      # H2 reports TEXT as CLOB, which trips schema validation; real Postgres runs validate.
+      ddl-auto: none
+  flyway:
+    enabled: true
+
+app:
+  auth0:
+    issuer: https://test-tenant.example.com/
+    audience: https://dm-assistant.test/api
+  dev-auth:
+    enabled: false
+  storage:
+    maps-dir: ${java.io.tmpdir}/dm-assistant-test-maps

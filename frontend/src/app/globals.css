@@ -1,0 +1,115 @@
+@import "tailwindcss";
+
+:root {
+  --bg: #070a12;
+  --panel: #0f1522;
+  --panel-2: #151d2e;
+  --border: #1f2a40;
+  --text: #e2e8f0;
+  --muted: #94a3b8;
+  --accent: #22d3ee;
+  --accent-2: #e879f9;
+}
+
+@theme inline {
+  --color-bg: var(--bg);
+  --color-panel: var(--panel);
+  --color-panel-2: var(--panel-2);
+  --color-line: var(--border);
+  --color-accent: var(--accent);
+  --color-accent-2: var(--accent-2);
+  --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+}
+
+html,
+body {
+  background: var(--bg);
+  color: var(--text);
+}
+
+body {
+  background-image:
+    radial-gradient(ellipse at top left, rgba(34, 211, 238, 0.08), transparent 50%),
+    radial-gradient(ellipse at bottom right, rgba(232, 121, 249, 0.07), transparent 50%);
+  background-attachment: fixed;
+}
+
+::selection {
+  background: rgba(34, 211, 238, 0.35);
+}
+
+/* Custom utilities (Tailwind v4 needs @utility for classes that are reused via @apply). */
+@utility panel {
+  @apply rounded-2xl border border-line bg-panel/90 shadow-xl shadow-black/30 backdrop-blur;
+}
+@utility label {
+  @apply mb-1 block text-xs font-medium uppercase tracking-wider text-slate-400;
+}
+@utility input {
+  @apply w-full rounded-lg border border-line bg-bg/70 px-3 py-2 text-sm text-slate-100 outline-none transition placeholder:text-slate-500 focus:border-accent focus:ring-2 focus:ring-accent/30 disabled:opacity-60;
+}
+@utility btn {
+  @apply inline-flex items-center justify-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition disabled:cursor-not-allowed disabled:opacity-50;
+}
+@utility btn-primary {
+  @apply btn bg-accent text-slate-950 hover:bg-cyan-300 focus-visible:ring-2 focus-visible:ring-accent/50;
+}
+@utility btn-ghost {
+  @apply btn border border-line bg-panel-2/60 text-slate-200 hover:border-slate-500 hover:bg-panel-2;
+}
+@utility btn-danger {
+  @apply btn border border-red-500/40 bg-red-500/10 text-red-300 hover:bg-red-500/20;
+}
+@utility chip {
+  @apply inline-flex items-center gap-1 rounded-full border border-line bg-panel-2 px-2.5 py-0.5 text-xs text-slate-300;
+}
+@utility card-link {
+  @apply panel block p-5 transition hover:-translate-y-0.5 hover:border-accent/60;
+}
+
+/* Leaflet tweaks for the dark map shell (doubled selector beats leaflet.css, which loads later) */
+.leaflet-container.leaflet-container {
+  background: #05070d;
+  font-family: var(--font-sans);
+}
+.leaflet-container.placing-marker {
+  cursor: crosshair;
+}
+.dm-marker {
+  background: transparent;
+  border: none;
+}
+.dm-marker svg {
+  overflow: visible;
+  filter: drop-shadow(0 2px 3px rgba(0, 0, 0, 0.6));
+  transition: transform 120ms ease;
+  transform-origin: 50% 100%;
+}
+.dm-marker:hover svg {
+  transform: scale(1.12);
+}
+.dm-marker.is-selected svg {
+  transform: scale(1.3);
+  filter: drop-shadow(0 0 6px rgba(34, 211, 238, 0.9));
+}
+.dm-marker.is-hidden svg {
+  opacity: 0.6;
+}
+.leaflet-tooltip.dm-tooltip {
+  background: rgba(15, 21, 34, 0.95);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.4);
+  font-size: 12px;
+  padding: 4px 8px;
+}
+.leaflet-tooltip.dm-tooltip::before {
+  display: none;
+}
+
+.scrollbar-thin {
+  scrollbar-width: thin;
+  scrollbar-color: #334155 transparent;
+}
