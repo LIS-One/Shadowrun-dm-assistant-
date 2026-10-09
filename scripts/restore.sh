@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 # Restores the database and the uploaded map images from a folder made by scripts/backup.sh.
 # Run from the project folder on the server:  bash scripts/restore.sh backups/2026-10-09_01-00
-# Before replacing anything it checks the backup files and saves the current data with backup.sh.
+# Before replacing anything it checks the backup files and saves the current data with backup.sh;
+# restoring that safety copy the same way undoes the restore.
 set -euo pipefail
 
 if grep -q '^COMPOSE_FILE=' .env 2>/dev/null; then
@@ -32,9 +33,11 @@ if [ "$ANSWER" != "yes" ]; then
 fi
 
 $COMPOSE up -d --wait db
-echo "Saving the current data first (in case you need it back)..."
-BACKUP_KEEP_DAYS=36500 bash scripts/backup.sh > /dev/null
+echo "Saving the current data first..."
+SAFETY=$(BACKUP_KEEP_DAYS=36500 bash scripts/backup.sh | sed -n 's/^Backup written to //p')
+echo "Current data saved to $SAFETY (to undo: bash scripts/restore.sh $SAFETY)"
 
+trap '[ "${DONE:-}" = 1 ] || echo "RESTORE FAILED, the site is stopped. To get the previous data back run: bash scripts/restore.sh $SAFETY"' EXIT
 $COMPOSE stop backend frontend
 $COMPOSE exec -T db psql -q -v ON_ERROR_STOP=1 -U dm_assistant -d postgres \
   -c "DROP DATABASE IF EXISTS dm_assistant WITH (FORCE);" \
@@ -42,7 +45,8 @@ $COMPOSE exec -T db psql -q -v ON_ERROR_STOP=1 -U dm_assistant -d postgres \
 gunzip -c "$SRC/database.sql.gz" | $COMPOSE exec -T db \
   psql -q -v ON_ERROR_STOP=1 --single-transaction -U dm_assistant -d dm_assistant > /dev/null
 $COMPOSE run --rm --no-deps -T --user root -v "$SRC:/backup:ro" --entrypoint sh backend \
-  -c "tar xzf /backup/maps.tar.gz -C /data/maps && chown -R 1001 /data/maps"
+  -c "find /data/maps -mindepth 1 -delete && tar xzf /backup/maps.tar.gz -C /data/maps && chown -R 1001 /data/maps"
 $COMPOSE up -d
 
+DONE=1
 echo "Restored from $SRC"
