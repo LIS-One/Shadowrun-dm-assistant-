@@ -7,6 +7,7 @@ import useSWR from "swr";
 import { Modal } from "@/components/Modal";
 import { useToast } from "@/components/Toaster";
 import { api, errorMessage, fetcher } from "@/lib/api";
+import { normalizeInviteCode } from "@/lib/invite-code";
 import { ROLE_LABELS, type Campaign } from "@/lib/types";
 
 const ROLE_STYLES = {
@@ -110,10 +111,10 @@ function JoinCampaignDialog({ onClose }: { onClose: () => void }) {
     const form = new FormData(e.currentTarget);
     setBusy(true);
     try {
-      const campaign = await api<Campaign>("/campaigns/join", {
-        method: "POST",
-        json: { inviteCode: form.get("inviteCode") },
-      });
+      // Accept a pasted invite link as well as the bare code.
+      const raw = String(form.get("inviteCode") ?? "");
+      const inviteCode = normalizeInviteCode(raw.includes("/join/") ? raw.split("/join/")[1] : raw);
+      const campaign = await api<Campaign>("/campaigns/join", { method: "POST", json: { inviteCode } });
       router.push(`/campaigns/${campaign.id}`);
     } catch (err) {
       toast(errorMessage(err), "error");
@@ -125,12 +126,13 @@ function JoinCampaignDialog({ onClose }: { onClose: () => void }) {
     <Modal title="Присоединиться к кампании" onClose={onClose}>
       <form onSubmit={submit} className="space-y-4">
         <label className="block">
-          <span className="label">Код приглашения</span>
+          <span className="label">Код или ссылка-приглашение</span>
           <input
             name="inviteCode"
             required
-            maxLength={32}
-            className="input font-mono uppercase tracking-widest"
+            maxLength={300}
+            autoCapitalize="characters"
+            className="input font-mono tracking-widest"
             placeholder="ABCD2345EF"
             autoFocus
           />

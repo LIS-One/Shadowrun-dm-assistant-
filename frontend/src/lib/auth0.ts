@@ -13,6 +13,8 @@ export function getAuth0(): Auth0Client {
         // Without an audience Auth0 issues an opaque token the Spring API can't validate.
         audience: process.env.AUTH0_AUDIENCE,
         scope: "openid profile email offline_access",
+        // Show Auth0's login/sign-up pages in Russian (when Russian is enabled in the tenant).
+        ui_locales: "ru",
       },
       signInReturnToPath: "/campaigns",
     });

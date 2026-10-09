@@ -1,0 +1,13 @@
+# Variant for servers that already run nginx (or another web server) on ports 80/443.
+# Caddy is switched off and the site listens on the server itself only (127.0.0.1:3000);
+# your existing web server forwards the domain there (see DEPLOY.md, step 5, variant B).
+#
+# Enable it by putting this line into .env:
+#   COMPOSE_FILE=docker-compose.prod.yml:docker-compose.behind-proxy.yml
+services:
+  caddy:
+    # Never started: a service with a profile only runs when that profile is requested.
+    profiles: ["builtin-https"]
+  frontend:
+    ports:
+      - "127.0.0.1:3000:3000"

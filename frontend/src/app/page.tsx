@@ -41,7 +41,7 @@ export default async function Home() {
         </p>
         <div className="mt-8 flex flex-col gap-3 sm:flex-row">
           <a href={loginUrl()} className="btn-primary px-8 py-3 text-sm">Войти в сеть</a>
-          <a href={`${loginUrl()}&screen_hint=signup`} className="btn-ghost px-8 py-3 text-sm">Регистрация</a>
+          <a href={loginUrl("/campaigns", { signup: true })} className="btn-ghost px-8 py-3 text-sm">Регистрация</a>
         </div>
       </section>
 

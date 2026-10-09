@@ -11,6 +11,10 @@ import { useToast } from "@/components/Toaster";
 import { api, errorMessage, fetcher } from "@/lib/api";
 import { ROLE_LABELS, type Campaign, type CampaignRole, type MarkerShape, type MarkerType, type Me, type Member } from "@/lib/types";
 
+function inviteLink(code: string): string {
+  return `${window.location.origin}/join/${code}`;
+}
+
 export default function MembersPage() {
   const { campaignId, campaign, isOwner, isMaster, mutate: mutateCampaign } = useCampaign();
   const router = useRouter();
@@ -41,8 +45,29 @@ export default function MembersPage() {
     }
   }
 
+  function copy(text: string, message: string) {
+    navigator.clipboard?.writeText(text).then(
+      () => toast(message, "success"),
+      () => toast(text),
+    );
+  }
+
+  /** Native share sheet on phones (Telegram, WhatsApp…), clipboard elsewhere. */
+  async function shareInvite(code: string, name: string) {
+    const url = inviteLink(code);
+    if (navigator.share) {
+      try {
+        await navigator.share({ title: `Shadowrun: ${name}`, text: `Присоединяйся к кампании «${name}»`, url });
+        return;
+      } catch (err) {
+        if (err instanceof DOMException && err.name === "AbortError") return;
+      }
+    }
+    copy(url, "Ссылка скопирована");
+  }
+
   async function regenerateCode() {
-    if (!confirm("Старый код перестанет работать. Продолжить?")) return;
+    if (!confirm("Старые ссылки и код перестанут работать. Продолжить?")) return;
     try {
       const updated = await api<Campaign>(`${base}/invite-code`, { method: "POST" });
       mutateCampaign(updated, { revalidate: false });
@@ -97,20 +122,20 @@ export default function MembersPage() {
       <aside className="space-y-6">
         {campaign?.inviteCode && (
           <div className="panel cut-corners hud-brackets p-5">
-            <h3 className="label">Код приглашения</h3>
-            <div className="flex items-center gap-2">
-              <code className="glow flex-1 bg-bg/60 px-3 py-2 text-center font-mono text-lg tracking-[0.25em] text-accent">{campaign.inviteCode}</code>
-              <button
-                className="btn-ghost"
-                onClick={() => {
-                  navigator.clipboard?.writeText(campaign.inviteCode!);
-                  toast("Код скопирован");
-                }}
-              >
-                ⧉
+            <h3 className="label">Приглашение игроков</h3>
+            <code className="glow block bg-bg/60 px-3 py-2 text-center font-mono text-lg tracking-[0.25em] text-accent">{campaign.inviteCode}</code>
+            <div className="mt-3 grid grid-cols-2 gap-2">
+              <button className="btn-primary" onClick={() => shareInvite(campaign.inviteCode!, campaign.name)}>
+                Поделиться
+              </button>
+              <button className="btn-ghost" onClick={() => copy(inviteLink(campaign.inviteCode!), "Ссылка скопирована")}>
+                Ссылка
               </button>
             </div>
-            <p className="mt-2 text-xs text-muted">Новые участники присоединяются как игроки.</p>
+            <p className="mt-2 text-xs text-muted">
+              Отправьте игрокам ссылку: они зарегистрируются и сразу попадут в кампанию как игроки. Код можно ввести и
+              вручную на странице кампаний («По коду»).
+            </p>
             {isOwner && <button onClick={regenerateCode} className="mt-2 min-h-11 font-mono text-[11px] uppercase text-muted hover:text-accent">Сгенерировать новый код</button>}
           </div>
         )}

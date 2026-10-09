@@ -1,18 +1,30 @@
 package com.lisone.dmassistant;
 
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.springframework.boot.test.system.CapturedOutput;
+import org.springframework.boot.test.system.OutputCaptureExtension;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.nullValue;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+@ExtendWith(OutputCaptureExtension.class)
 class CampaignApiTest extends ApiTestSupport {
 
     @Test
     void requestsWithoutTokenAreRejected() throws Exception {
         mvc.perform(get("/api/campaigns")).andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    void rejectedTokensAreLoggedWithTheReason(CapturedOutput output) throws Exception {
+        mvc.perform(get("/api/campaigns").header("Authorization", "Bearer not-a-jwt"))
+                .andExpect(status().isUnauthorized());
+        assertThat(output).contains("Rejected access token for GET /api/campaigns: ");
     }
 
     @Test

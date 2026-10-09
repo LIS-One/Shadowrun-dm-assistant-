@@ -10,6 +10,7 @@ import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.oauth2.core.DelegatingOAuth2TokenValidator;
+import org.springframework.security.oauth2.core.OAuth2AuthenticationException;
 import org.springframework.security.oauth2.core.OAuth2TokenValidator;
 import org.springframework.security.oauth2.jose.jws.MacAlgorithm;
 import org.springframework.security.oauth2.jwt.Jwt;
@@ -18,6 +19,8 @@ import org.springframework.security.oauth2.jwt.JwtClaimValidator;
 import org.springframework.security.oauth2.jwt.JwtDecoder;
 import org.springframework.security.oauth2.jwt.JwtValidators;
 import org.springframework.security.oauth2.jwt.NimbusJwtDecoder;
+import org.springframework.security.oauth2.server.resource.web.BearerTokenAuthenticationEntryPoint;
+import org.springframework.security.web.AuthenticationEntryPoint;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.util.StringUtils;
 import org.springframework.web.cors.CorsConfiguration;
@@ -46,8 +49,25 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, "/actuator/health", "/actuator/health/**").permitAll()
                         .requestMatchers("/api/**").authenticated()
                         .anyRequest().denyAll())
-                .oauth2ResourceServer(oauth -> oauth.jwt(Customizer.withDefaults()));
+                .oauth2ResourceServer(oauth -> oauth
+                        .jwt(Customizer.withDefaults())
+                        .authenticationEntryPoint(loggingEntryPoint()));
         return http.build();
+    }
+
+    /**
+     * Logs why a token was rejected (e.g. "The iss claim is not valid" for a wrong AUTH0_DOMAIN), which Spring only
+     * reports in a response header. Requests without any token are not logged.
+     */
+    private static AuthenticationEntryPoint loggingEntryPoint() {
+        AuthenticationEntryPoint delegate = new BearerTokenAuthenticationEntryPoint();
+        return (request, response, ex) -> {
+            if (ex instanceof OAuth2AuthenticationException) {
+                log.warn("Rejected access token for {} {}: {}", request.getMethod(), request.getRequestURI(),
+                        ex.getMessage());
+            }
+            delegate.commence(request, response, ex);
+        };
     }
 
     @Bean
