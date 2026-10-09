@@ -13,6 +13,7 @@ fi
 KEEP_DAYS="${BACKUP_KEEP_DAYS:-14}"
 STAMP=$(date +%Y-%m-%d_%H-%M)
 DEST="backups/$STAMP"
+[ -e "$DEST" ] && DEST="$DEST-$(date +%S)"
 mkdir -p "$DEST"
 
 $COMPOSE exec -T db pg_dump -U dm_assistant dm_assistant | gzip > "$DEST/database.sql.gz"

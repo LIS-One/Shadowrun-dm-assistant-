@@ -17,6 +17,12 @@ export function getAuth0(): Auth0Client {
         ui_locales: "ru",
       },
       signInReturnToPath: "/campaigns",
+      // Games are often weekly: keep players signed in for two weeks without visits (30 days at most)
+      // instead of the library default of one day. Auth0's refresh token still has to be valid.
+      session: {
+        inactivityDuration: 60 * 60 * 24 * 14,
+        absoluteDuration: 60 * 60 * 24 * 30,
+      },
     });
   }
   return client;

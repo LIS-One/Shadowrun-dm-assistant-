@@ -1,5 +1,5 @@
 # Variant for servers that already run nginx (or another web server) on ports 80/443.
-# Caddy is switched off and the site listens on the server itself only (127.0.0.1:3000);
+# Caddy is switched off and the site listens on the server itself only (127.0.0.1:3000 by default);
 # your existing web server forwards the domain there (see DEPLOY.md, step 5, variant B).
 #
 # Enable it by putting this line into .env:
@@ -10,4 +10,5 @@ services:
     profiles: ["builtin-https"]
   frontend:
     ports:
-      - "127.0.0.1:3000:3000"
+      # If port 3000 is already used on the server, set e.g. FRONTEND_PORT=3001 in .env.
+      - "127.0.0.1:${FRONTEND_PORT:-3000}:3000"
